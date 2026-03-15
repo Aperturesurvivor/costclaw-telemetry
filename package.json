@@ -1,14 +1,27 @@
 {
-  "name": "costclaw",
+  "name": "costclaw-telemetry",
   "version": "0.1.0",
-  "description": "Real-time LLM cost tracking and local dashboard for OpenClaw",
+  "description": "Reduce your OpenClaw agent costs. Real-time LLM cost tracking + local dashboard. Free and private.",
   "type": "module",
   "main": "dist/index.js",
+  "files": [
+    "dist/",
+    "src/",
+    "openclaw.plugin.json",
+    "AGENT.md",
+    "llms.txt"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "openclaw": {
-    "extensions": ["./dist/index.js"]
+    "extensions": [
+      "./dist/index.js"
+    ]
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "dev": "node --import tsx/esm src/index.ts",
     "start": "node dist/index.js"
   },
@@ -18,16 +31,21 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.19.15",
     "tsx": "^4.19.2",
     "typescript": "^5.7.0"
   },
   "keywords": [
     "openclaw",
-    "llm",
-    "cost",
-    "telemetry",
-    "dashboard"
+    "openclaw-plugin",
+    "llm-cost-tracking",
+    "ai-cost-optimization",
+    "llm-monitoring",
+    "cost-dashboard",
+    "llm-costs",
+    "ai-agents",
+    "cost-tracking",
+    "telemetry"
   ],
   "license": "MIT",
   "homepage": "https://github.com/Aperturesurvivor/costclaw-telemetry#readme",
