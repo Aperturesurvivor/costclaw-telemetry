@@ -1,5 +1,5 @@
 {
-  "name": "costclaw-telemetry",
+  "name": "costclaw",
   "version": "0.1.0",
   "description": "Reduce your OpenClaw agent costs. Real-time LLM cost tracking + local dashboard. Free and private.",
   "type": "module",
@@ -27,10 +27,10 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.48",
-    "better-sqlite3": "^9.4.3"
+    "better-sqlite3": "12.8.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.19.15",
     "tsx": "^4.19.2",
     "typescript": "^5.7.0"
