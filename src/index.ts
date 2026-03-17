@@ -5,6 +5,7 @@ import { loadRules, redact } from "./redact/engine.js";
 import { initDb, closeDb } from "./storage/db.js";
 import { upsertLlmRecord, upsertToolRecord, getSummary } from "./storage/queries.js";
 import { computeCost } from "./pricing/calculator.js";
+import { initPricingRegistry, getPricingOverridePath } from "./pricing/registry.js";
 import { startServer, stopServer } from "./server/http.js";
 
 // Track which agentIds are subagents (populated via subagent_spawning hook)
@@ -17,13 +18,16 @@ export default function register(api: any) {
   const stateDir: string = api.runtime.state.resolveStateDir();
   const dbPath = `${stateDir}/costclaw.db`;
   const piiRulesPath = `${stateDir}/costclaw-pii-rules.json`;
+  const pricingPath = `${stateDir}/costclaw-pricing.json`;
   const port: number = (api.pluginConfig?.port as number) ?? 3333;
 
-  // Init DB and PII rules eagerly (synchronous, fast)
+  // Init DB and runtime config eagerly (synchronous, fast)
   initDb(dbPath);
   loadRules(piiRulesPath);
+  initPricingRegistry(pricingPath);
 
   api.logger.info(`CostClaw initialized — db: ${dbPath}`);
+  api.logger.info(`CostClaw pricing config: ${getPricingOverridePath()}`);
 
   // ── Hook: track which agents are subagents ─────────────────────────────────
   api.on(
@@ -54,14 +58,16 @@ export default function register(api: any) {
       const inputTokens = event.usage.input ?? 0;
       const outputTokens = event.usage.output ?? 0;
       const { costUsd, source } = computeCost(event.model, inputTokens, outputTokens);
+      const isSubagent = Boolean(ctx.sessionKey?.includes(":subagent:")) || (ctx.agentId ? subagentIds.has(ctx.agentId) : false);
+      const trigger = isSubagent && (!ctx.trigger || ctx.trigger === "user") ? "subagent" : (ctx.trigger ?? "user");
 
       upsertLlmRecord({
         sourceId: `hook:${event.runId}:${randomUUID()}`,
         tsMs: Date.now(),
         sessionKey: ctx.sessionKey,
         agentId: ctx.agentId,
-        trigger: ctx.trigger ?? "user",
-        isSubagent: ctx.agentId ? subagentIds.has(ctx.agentId) : false,
+        trigger,
+        isSubagent,
         model: event.model,
         inputTokens,
         outputTokens,
