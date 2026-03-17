@@ -27,7 +27,7 @@ export const MODEL_PRICING: Record<string, ModelPrice> = {
   "claude-3-sonnet-20240229":    { inputPer1M: 3.00,  outputPer1M: 15.00 },
   "claude-3-haiku-20240307":     { inputPer1M: 0.25,  outputPer1M: 1.25  },
   "claude-sonnet-4-6":           { inputPer1M: 3.00,  outputPer1M: 15.00 },
-  "claude-opus-4-6":             { inputPer1M: 15.00, outputPer1M: 75.00 },
+  "claude-opus-4-6":             { inputPer1M: 5.00,  outputPer1M: 25.00 },
   "claude-haiku-4-5":            { inputPer1M: 0.80,  outputPer1M: 4.00  },
 
   // Google Gemini
@@ -48,6 +48,20 @@ export const MODEL_PRICING: Record<string, ModelPrice> = {
   "llama-3.1-70b-instruct":      { inputPer1M: 0.52,  outputPer1M: 0.75  },
   "llama-3.1-8b-instruct":       { inputPer1M: 0.05,  outputPer1M: 0.08  },
   "llama-3.3-70b-instruct":      { inputPer1M: 0.23,  outputPer1M: 0.40  },
+
+  // OpenRouter exact model ids from local OpenClaw config
+  "openrouter/moonshotai/kimi-k2.5":            { inputPer1M: 0.45, outputPer1M: 2.20  },
+  "openrouter/google/gemini-3-flash-preview":   { inputPer1M: 0.50, outputPer1M: 3.00  },
+  "openrouter/deepseek/deepseek-v3.2":          { inputPer1M: 0.26, outputPer1M: 0.38  },
+  "openrouter/anthropic/claude-opus-4.6":       { inputPer1M: 5.00, outputPer1M: 25.00 },
+  "openrouter/anthropic/claude-sonnet-4.6":     { inputPer1M: 3.00, outputPer1M: 15.00 },
+
+  // Emitted raw model ids observed from telemetry hooks
+  "moonshotai/kimi-k2.5":                      { inputPer1M: 0.45, outputPer1M: 2.20  },
+  "google/gemini-3-flash-preview":             { inputPer1M: 0.50, outputPer1M: 3.00  },
+  "deepseek/deepseek-v3.2":                    { inputPer1M: 0.26, outputPer1M: 0.38  },
+  "anthropic/claude-opus-4.6":                 { inputPer1M: 5.00, outputPer1M: 25.00 },
+  "anthropic/claude-sonnet-4.6":               { inputPer1M: 3.00, outputPer1M: 15.00 },
 };
 
 // Canonical aliases for prefix matching (longest match wins)
