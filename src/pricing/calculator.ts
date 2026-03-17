@@ -1,4 +1,4 @@
-import { MODEL_PRICING, MODEL_ALIASES } from "./table.js";
+import { getModelAliases, getModelPricing, maybeReloadPricingRegistry } from "./registry.js";
 
 export type CostSource = "telemetry" | "calculated" | "estimated";
 
@@ -8,18 +8,22 @@ export interface CostResult {
 }
 
 function resolveModel(raw: string): string | null {
+  maybeReloadPricingRegistry();
+
+  const modelPricing = getModelPricing();
+  const modelAliases = getModelAliases();
   const lower = raw.toLowerCase().trim();
 
   // Exact match
-  if (MODEL_PRICING[lower]) return lower;
+  if (modelPricing[lower]) return lower;
 
   // Alias match
-  for (const [alias, canonical] of MODEL_ALIASES) {
+  for (const [alias, canonical] of modelAliases) {
     if (lower.startsWith(alias)) return canonical;
   }
 
   // Prefix scan (longest matching key wins)
-  const keys = Object.keys(MODEL_PRICING).sort((a, b) => b.length - a.length);
+  const keys = Object.keys(modelPricing).sort((a, b) => b.length - a.length);
   for (const key of keys) {
     if (lower.startsWith(key) || key.startsWith(lower)) return key;
   }
@@ -43,7 +47,7 @@ export function computeCost(
     return { costUsd: 0, source: "estimated" };
   }
 
-  const price = MODEL_PRICING[resolved];
+  const price = getModelPricing()[resolved];
   const costUsd =
     (inputTokens / 1_000_000) * price.inputPer1M +
     (outputTokens / 1_000_000) * price.outputPer1M;
