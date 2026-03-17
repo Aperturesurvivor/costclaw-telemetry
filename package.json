@@ -1,5 +1,5 @@
 {
-  "name": "costclaw-telemetry",
+  "name": "costclaw",
   "version": "0.1.0",
   "description": "Reduce your OpenClaw agent costs. Real-time LLM cost tracking + local dashboard. Free and private.",
   "type": "module",
