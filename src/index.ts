@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-import { execSync } from "child_process";
 import { Type } from "@sinclair/typebox";
 import { loadRules, redact } from "./redact/engine.js";
 import { initDb, closeDb } from "./storage/db.js";
@@ -7,14 +6,13 @@ import { upsertLlmRecord, upsertToolRecord, getSummary } from "./storage/queries
 import { computeCost } from "./pricing/calculator.js";
 import { initPricingRegistry, getPricingOverridePath } from "./pricing/registry.js";
 import { startServer, stopServer } from "./server/http.js";
-
-// Track which agentIds are subagents (populated via subagent_spawning hook)
-const subagentIds = new Set<string>();
+import { normalizeUsage, readTelemetryCostUsd, type RawUsage } from "./usage.js";
 
 // Use `any` for api type — avoids needing to install openclaw as a dev dep
 // The actual types come from openclaw at runtime
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function register(api: any) {
+export function register(api: any) {
+  const subagentIds = new Set<string>();
   const stateDir: string = api.runtime.state.resolveStateDir();
   const dbPath = `${stateDir}/costclaw.db`;
   const piiRulesPath = `${stateDir}/costclaw-pii-rules.json`;
@@ -44,8 +42,11 @@ export default function register(api: any) {
     (
       event: {
         runId: string;
+        provider?: string;
         model: string;
-        usage?: { input?: number; output?: number };
+        resolvedRef?: string;
+        lastAssistant?: unknown;
+        usage?: RawUsage;
       },
       ctx: {
         sessionKey?: string;
@@ -55,9 +56,13 @@ export default function register(api: any) {
     ) => {
       if (!event.usage) return;
 
-      const inputTokens = event.usage.input ?? 0;
-      const outputTokens = event.usage.output ?? 0;
-      const { costUsd, source } = computeCost(event.model, inputTokens, outputTokens);
+      const usage = normalizeUsage(event.usage);
+      const telemetryCostUsd = readTelemetryCostUsd(event.lastAssistant);
+      const { costUsd, source } = computeCost(
+        event.resolvedRef ?? event.model,
+        usage,
+        telemetryCostUsd
+      );
       const isSubagent = Boolean(ctx.sessionKey?.includes(":subagent:")) || (ctx.agentId ? subagentIds.has(ctx.agentId) : false);
       const trigger = isSubagent && (!ctx.trigger || ctx.trigger === "user") ? "subagent" : (ctx.trigger ?? "user");
 
@@ -68,9 +73,9 @@ export default function register(api: any) {
         agentId: ctx.agentId,
         trigger,
         isSubagent,
+        provider: event.provider,
         model: event.model,
-        inputTokens,
-        outputTokens,
+        ...usage,
         costUsd,
         costSource: source,
       });
@@ -144,25 +149,21 @@ export default function register(api: any) {
     name: "costclaw_dashboard",
     label: "CostClaw Dashboard",
     description:
-      "Opens your local CostClaw cost dashboard in the browser. Shows spend trends, model breakdown, per-session costs, and saving recommendations.",
+      "Returns the local CostClaw dashboard URL. The dashboard shows spend trends, model breakdown, per-session costs, and saving recommendations.",
     parameters: Type.Object({}),
     async execute(_toolCallId: string, _params: Record<string, never>) {
       const url = `http://localhost:${port}`;
-      try {
-        const cmd =
-          process.platform === "darwin"
-            ? `open "${url}"`
-            : process.platform === "win32"
-              ? `start "${url}"`
-              : `xdg-open "${url}"`;
-        execSync(cmd, { stdio: "ignore" });
-      } catch {
-        // Best effort — user can open manually
-      }
       return {
-        content: [{ type: "text" as const, text: `Dashboard opened: ${url}` }],
+        content: [{ type: "text" as const, text: `Open the CostClaw dashboard: ${url}` }],
         details: { url },
       };
     },
   });
 }
+
+export default {
+  id: "costclaw-telemetry",
+  name: "CostClaw",
+  description: "Local, cache-aware LLM usage and cost telemetry for OpenClaw.",
+  register,
+};

@@ -14,9 +14,12 @@ export interface LlmRecord {
   agentId?: string | null;
   trigger?: string | null;
   isSubagent?: boolean;
+  provider?: string | null;
   model: string;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   costUsd: number;
   costSource: CostSource;
 }
@@ -47,16 +50,18 @@ export function upsertLlmRecord(r: LlmRecord): void {
   db.prepare(`
     INSERT OR IGNORE INTO llm_events
       (source_id, ts_ms, ts_iso, session_key, agent_id, trigger, is_subagent,
-       model, input_tokens, output_tokens, cost_usd, cost_source)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       provider, model, input_tokens, output_tokens, cache_read_tokens,
+       cache_write_tokens, cost_usd, cost_source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.sourceId, r.tsMs, tsIso,
     r.sessionKey ?? null,
     r.agentId ?? null,
     r.trigger ?? null,
     r.isSubagent ? 1 : 0,
+    r.provider ?? null,
     r.model,
-    r.inputTokens, r.outputTokens,
+    r.inputTokens, r.outputTokens, r.cacheReadTokens, r.cacheWriteTokens,
     r.costUsd, r.costSource
   );
 }
@@ -69,7 +74,7 @@ export function getTriggerBreakdown(): TriggerBreakdown[] {
       COALESCE(trigger, 'user')        AS trigger,
       is_subagent                       AS isSubagent,
       SUM(cost_usd)                     AS costUsd,
-      SUM(input_tokens + output_tokens) AS tokens,
+      SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens) AS tokens,
       COUNT(*)                          AS eventCount
     FROM llm_events
     WHERE ts_iso LIKE ?
@@ -133,7 +138,9 @@ export function getModelBreakdown(): ModelBreakdown[] {
       model,
       SUM(cost_usd)      AS costUsd,
       SUM(input_tokens)  AS inputTokens,
-      SUM(output_tokens) AS outputTokens
+      SUM(output_tokens) AS outputTokens,
+      SUM(cache_read_tokens)  AS cacheReadTokens,
+      SUM(cache_write_tokens) AS cacheWriteTokens
     FROM llm_events
     WHERE ts_iso LIKE ?
     GROUP BY model
@@ -169,11 +176,15 @@ export function getSummary(): Summary {
   const monthPrefix = new Date().toISOString().slice(0, 7);
 
   const todayRow = db.prepare(
-    `SELECT COALESCE(SUM(cost_usd), 0) AS v, COALESCE(SUM(input_tokens + output_tokens), 0) AS t FROM llm_events WHERE ts_iso = ?`
+    `SELECT COALESCE(SUM(cost_usd), 0) AS v,
+            COALESCE(SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens), 0) AS t
+     FROM llm_events WHERE ts_iso = ?`
   ).get(today) as { v: number; t: number };
 
   const monthRow = db.prepare(
-    `SELECT COALESCE(SUM(cost_usd), 0) AS v, COALESCE(SUM(input_tokens + output_tokens), 0) AS t FROM llm_events WHERE ts_iso LIKE ?`
+    `SELECT COALESCE(SUM(cost_usd), 0) AS v,
+            COALESCE(SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens), 0) AS t
+     FROM llm_events WHERE ts_iso LIKE ?`
   ).get(`${monthPrefix}%`) as { v: number; t: number };
 
   const modelRow = db.prepare(
@@ -217,7 +228,7 @@ export function getHourlySpend(): HourlySpend[] {
     SELECT
       strftime('%H', ts_ms / 1000, 'unixepoch', 'localtime') AS hour,
       COALESCE(SUM(cost_usd), 0)                              AS costUsd,
-      COALESCE(SUM(input_tokens + output_tokens), 0)          AS tokens
+      COALESCE(SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens), 0) AS tokens
     FROM llm_events
     WHERE ts_iso = ?
     GROUP BY hour
@@ -236,7 +247,7 @@ export function getYesterdaySpend(): YesterdaySpend {
   const row = db.prepare(`
     SELECT
       COALESCE(SUM(cost_usd), 0)                     AS totalUsd,
-      COALESCE(SUM(input_tokens + output_tokens), 0)  AS totalTokens,
+      COALESCE(SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens), 0) AS totalTokens,
       COUNT(*)                                         AS eventCount
     FROM llm_events
     WHERE ts_iso = date('now', '-1 day')

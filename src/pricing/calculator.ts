@@ -1,4 +1,5 @@
 import { getModelAliases, getModelPricing, maybeReloadPricingRegistry } from "./registry.js";
+import type { NormalizedUsage } from "../usage.js";
 
 export type CostSource = "telemetry" | "calculated" | "estimated";
 
@@ -33,12 +34,14 @@ function resolveModel(raw: string): string | null {
 
 export function computeCost(
   model: string,
-  inputTokens: number,
-  outputTokens: number,
+  usage: NormalizedUsage,
   telemetryCostUsd?: number
 ): CostResult {
-  // Trust telemetry cost if it's present and nonzero
-  if (telemetryCostUsd != null && telemetryCostUsd > 0) {
+  if (
+    telemetryCostUsd != null &&
+    Number.isFinite(telemetryCostUsd) &&
+    telemetryCostUsd >= 0
+  ) {
     return { costUsd: telemetryCostUsd, source: "telemetry" };
   }
 
@@ -48,9 +51,13 @@ export function computeCost(
   }
 
   const price = getModelPricing()[resolved];
+  const cacheReadPer1M = price.cacheReadPer1M ?? price.inputPer1M;
+  const cacheWritePer1M = price.cacheWritePer1M ?? price.inputPer1M;
   const costUsd =
-    (inputTokens / 1_000_000) * price.inputPer1M +
-    (outputTokens / 1_000_000) * price.outputPer1M;
+    (usage.inputTokens / 1_000_000) * price.inputPer1M +
+    (usage.outputTokens / 1_000_000) * price.outputPer1M +
+    (usage.cacheReadTokens / 1_000_000) * cacheReadPer1M +
+    (usage.cacheWriteTokens / 1_000_000) * cacheWritePer1M;
 
   return { costUsd, source: "calculated" };
 }

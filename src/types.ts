@@ -72,6 +72,8 @@ export interface ModelBreakdown {
   costUsd: number;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   pct: number;
 }
 

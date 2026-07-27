@@ -19,8 +19,25 @@ function normalizeModelMap(input?: Record<string, ModelPrice>): Record<string, M
     if (!key || value == null) continue;
     const inputPer1M = Number(value.inputPer1M);
     const outputPer1M = Number(value.outputPer1M);
-    if (!Number.isFinite(inputPer1M) || !Number.isFinite(outputPer1M)) continue;
-    out[key.toLowerCase().trim()] = { inputPer1M, outputPer1M };
+    if (
+      !Number.isFinite(inputPer1M) ||
+      !Number.isFinite(outputPer1M) ||
+      inputPer1M < 0 ||
+      outputPer1M < 0
+    ) continue;
+
+    const cacheReadPer1M = Number(value.cacheReadPer1M);
+    const cacheWritePer1M = Number(value.cacheWritePer1M);
+    out[key.toLowerCase().trim()] = {
+      inputPer1M,
+      outputPer1M,
+      ...(Number.isFinite(cacheReadPer1M) && cacheReadPer1M >= 0
+        ? { cacheReadPer1M }
+        : {}),
+      ...(Number.isFinite(cacheWritePer1M) && cacheWritePer1M >= 0
+        ? { cacheWritePer1M }
+        : {}),
+    };
   }
   return out;
 }

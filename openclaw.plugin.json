@@ -1,13 +1,26 @@
 {
-  "id": "costclaw",
+  "id": "costclaw-telemetry",
   "name": "CostClaw",
-  "description": "Real-time LLM cost tracking and local dashboard for OpenClaw. Privacy-first — all data stays on your machine.",
-  "version": "0.1.0",
+  "description": "Local, cache-aware LLM usage and cost telemetry for OpenClaw.",
+  "version": "0.2.0",
+  "legacyPluginIds": ["costclaw"],
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "costclaw_status",
+      "costclaw_dashboard"
+    ]
+  },
   "configSchema": {
     "type": "object",
+    "additionalProperties": false,
     "properties": {
       "port": {
-        "type": "number",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535,
         "description": "Port for the local dashboard server (default: 3333)"
       }
     }

@@ -590,7 +590,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   function renderModelTable() {
     const models = [...(latestData.models || [])].map(m => ({
       ...m,
-      tokens: (m.inputTokens||0) + (m.outputTokens||0),
+      tokens:
+        (m.inputTokens||0) +
+        (m.outputTokens||0) +
+        (m.cacheReadTokens||0) +
+        (m.cacheWriteTokens||0),
     }));
     const ss = sortState.model;
     models.sort((a,b) => ss.dir * (a[ss.col] < b[ss.col] ? -1 : a[ss.col] > b[ss.col] ? 1 : 0));

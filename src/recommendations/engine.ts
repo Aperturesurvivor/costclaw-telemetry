@@ -1,5 +1,5 @@
 import { getDb } from "../storage/db.js";
-import { MODEL_PRICING } from "../pricing/table.js";
+import { getModelPricing, maybeReloadPricingRegistry } from "../pricing/registry.js";
 import type { Recommendation } from "../types.js";
 
 // Cheaper alternatives for expensive models
@@ -20,6 +20,8 @@ export function generateRecommendations(): Recommendation[] {
   const recs: Recommendation[] = [];
   const db = getDb();
   const monthPrefix = new Date().toISOString().slice(0, 7);
+  maybeReloadPricingRegistry();
+  const modelPricing = getModelPricing();
 
   // Rec 1: Model downgrade opportunity
   try {
@@ -45,9 +47,9 @@ export function generateRecommendations(): Recommendation[] {
     if (rows.length > 0) {
       const top = rows[0];
       const alt = CHEAPER_ALTERNATIVES[top.model];
-      if (alt && MODEL_PRICING[alt] && MODEL_PRICING[top.model]) {
-        const currentPrice = MODEL_PRICING[top.model];
-        const altPrice = MODEL_PRICING[alt];
+      if (alt && modelPricing[alt] && modelPricing[top.model]) {
+        const currentPrice = modelPricing[top.model];
+        const altPrice = modelPricing[alt];
         const avgInput = top.avgOutputTokens * 3; // rough estimate
         const currentPerCall =
           (avgInput / 1_000_000) * currentPrice.inputPer1M +
