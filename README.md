@@ -34,17 +34,21 @@ before making financial decisions.
 
 ## Install
 
-Install the npm package, enable it, and explicitly allow the conversation hook
-used to receive normalized usage metadata:
+Download the v0.2 release package, install it, enable it, and explicitly allow
+the conversation hook used to receive normalized usage metadata:
 
 ```bash
-openclaw plugins install npm:costclaw-telemetry
+curl -fLO https://github.com/Aperturesurvivor/costclaw-telemetry/releases/download/v0.2.0/costclaw-telemetry-0.2.0.tgz
+openclaw plugins install ./costclaw-telemetry-0.2.0.tgz
 openclaw plugins enable costclaw-telemetry
 openclaw config set plugins.entries.costclaw-telemetry.hooks.allowConversationAccess true --strict-json
 openclaw gateway restart
 ```
 
 Then open <http://localhost:3333>.
+
+The npm registry still serves the original v0.1 package. Use the release
+artifact or source installation until v0.2 is published there.
 
 OpenClaw requires `allowConversationAccess` for non-bundled `llm_output`
 hooks. That permission lets a plugin receive the model-output event, including
