@@ -40,7 +40,7 @@ CostClaw fixes all of this.
 - **Session cost tracking** — see exactly which conversations cost the most
 - **Today / 7-day / 30-day views** with hourly drill-down for today
 - **Automatic saving recommendations** based on your actual usage patterns
-- **Supports 30+ models** — Claude 3.5/4, GPT-4o/mini, o1/o3, Gemini 2.5, Grok-2/3, Llama variants, and more
+- **Runtime pricing config** via `~/.openclaw/costclaw-pricing.json`
 - **Persistent SQLite storage** with auto-migrations — survives restarts, no data loss
 - **PII redaction** — sensitive data scrubbed before storage
 - **Privacy-first** — all data stays in `~/.openclaw/costclaw.db`, zero external requests
@@ -97,17 +97,11 @@ Once installed, your OpenClaw agent gets two new tools:
 
 ## Supported models and pricing
 
-CostClaw includes pricing for 30+ models out of the box:
+CostClaw now treats `~/.openclaw/costclaw-pricing.json` as the source of truth for pricing and aliases.
 
-| Provider | Models |
-|---|---|
-| Anthropic | claude-3-5-sonnet, claude-3-5-haiku, claude-3-opus, claude-sonnet-4, claude-haiku-4 |
-| OpenAI | gpt-4o, gpt-4o-mini, o1, o1-mini, o3, o3-mini |
-| Google | gemini-2.5-pro, gemini-2.5-flash, gemini-1.5-pro |
-| xAI | grok-2, grok-3 |
-| Meta | llama-3.3-70b, llama-3.1-8b, llama-3.1-405b |
+There are no built-in model prices in the local fork. If a model is not present in your pricing JSON (either directly or via an alias), the event is still tracked but cost falls back to `$0.00` with `estimated` source.
 
-To add a model: edit `src/pricing/table.ts`, run `npm run build && openclaw gateway restart`.
+To add or change a model price, edit `~/.openclaw/costclaw-pricing.json` and restart the gateway.
 
 ---
 
@@ -135,6 +129,23 @@ Custom PII redaction rules in `~/.openclaw/costclaw-pii-rules.json`:
 ]
 ```
 
+Pricing config in `~/.openclaw/costclaw-pricing.json`:
+
+```json
+{
+  "models": {
+    "moonshotai/kimi-k2.5": { "inputPer1M": 0.45, "outputPer1M": 2.2 },
+    "google/gemini-3-flash-preview": { "inputPer1M": 0.5, "outputPer1M": 3.0 }
+  },
+  "aliases": {
+    "openrouter/moonshotai/kimi-k2.5": "moonshotai/kimi-k2.5",
+    "openrouter/google/gemini-3-flash-preview": "google/gemini-3-flash-preview"
+  }
+}
+```
+
+The pricing JSON is loaded at runtime from disk and is the only pricing source in this local fork. After editing the JSON file, you only need a gateway restart, not a code rebuild.
+
 ---
 
 ## FAQ
@@ -149,7 +160,7 @@ No. CostClaw captures data via OpenClaw's native event hooks — the same path u
 No. Everything stays in `~/.openclaw/costclaw.db` on your local machine. The dashboard server only binds to localhost.
 
 **What if a model shows $0.00 cost?**
-The model name reported by the API isn't in the pricing table yet. Add it to `src/pricing/table.ts` — takes 30 seconds.
+The model name reported by the API isn't in your pricing config yet. Add it to `~/.openclaw/costclaw-pricing.json` directly or map it via an alias, then restart the gateway.
 
 **Can I use this with multiple OpenClaw instances?**
 Each instance needs its own plugin install. Multi-machine aggregation is on the roadmap.
@@ -169,7 +180,7 @@ openclaw plugins list
 openclaw plugins enable costclaw && openclaw gateway restart
 ```
 
-**Cost shows $0.00 for a model** — add it to `src/pricing/table.ts` and rebuild.
+**Cost shows $0.00 for a model** — add it to `~/.openclaw/costclaw-pricing.json` and restart the gateway.
 
 **Port conflict** — change port in `~/.openclaw/openclaw.json`.
 
@@ -180,7 +191,8 @@ openclaw plugins enable costclaw && openclaw gateway restart
 ```
 src/
   index.ts                  Plugin entry — registers hooks, tools, HTTP service
-  pricing/table.ts          Model pricing table (30+ models)
+  pricing/table.ts          Empty built-in placeholder (runtime pricing comes from JSON)
+  pricing/registry.ts       Runtime pricing loader for ~/.openclaw/costclaw-pricing.json
   storage/db.ts             SQLite init and versioned migrations
   storage/queries.ts        All DB read/write functions
   redact/                   PII redaction engine + built-in rules
@@ -204,7 +216,7 @@ src/
 
 ## Contributing
 
-PRs welcome. To add a model's pricing, edit `src/pricing/table.ts`. To report a bug or request a feature, open an issue.
+PRs welcome. To improve pricing behavior, update the runtime pricing architecture and `~/.openclaw/costclaw-pricing.json` flow documented above. To report a bug or request a feature, open an issue.
 
 ---
 
@@ -215,3 +227,5 @@ MIT — free to use, modify, and distribute.
 ---
 
 *Made for the OpenClaw community. If this saved you money, consider starring the repo — it helps others find it.*
+ring the repo — it helps others find it.*
+repo — it helps others find it.*
