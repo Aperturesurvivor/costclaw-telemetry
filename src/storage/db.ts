@@ -71,12 +71,16 @@ const MIGRATIONS: Array<{ version: number; description: string; sql: string }> =
       CREATE INDEX IF NOT EXISTS idx_llm_trigger ON llm_events(trigger);
     `,
   },
-  // Add future migrations here:
-  // {
-  //   version: 2,
-  //   description: "...",
-  //   sql: `ALTER TABLE llm_events ADD COLUMN ...`,
-  // },
+  {
+    version: 2,
+    description: "Add provider and prompt-cache token columns to llm_events",
+    sql: `
+      ALTER TABLE llm_events ADD COLUMN provider           TEXT;
+      ALTER TABLE llm_events ADD COLUMN cache_read_tokens  INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE llm_events ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_llm_provider ON llm_events(provider);
+    `,
+  },
 ];
 
 function runMigrations(): void {
